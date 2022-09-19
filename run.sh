@@ -9,3 +9,4 @@ elif [[ $opt = "up-build" ]]; then
 elif [[ $opt = "down" ]]; then
   docker-compose -f docker-compose-dev.yml down
 fi
+
