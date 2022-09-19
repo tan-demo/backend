@@ -1,0 +1,68 @@
+name: CI_App
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - reopened
+      - synchronize
+  push:
+    branches:
+      - master
+  create:
+    tags:
+      - sandbox.*
+      - dev.*
+      - staging.*
+### Ensures that only one CI task per branch/environment will run at a time ###
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+#############################################################################
+#====================================BUILD==================================#
+#############################################################################
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+    - name: Set Env for Tag
+      id: set_tag
+      env:
+        EVENT_TAG: ${{ github.event_name == 'create' && startsWith(github.ref, 'refs/tags/')}}
+        EVENT_PUSH: ${{ github.event_name == 'push' }}
+      run: |
+        if ${EVENT_TAG} == true; then
+          echo "TAG=${{ github.event.ref }}" >> $GITHUB_ENV
+        elif ${EVENT_PUSH} == true; then
+          echo "TAG=testing.${{ github.sha }}" >> $GITHUB_ENV
+        else
+          echo "TAG=${{ github.sha }}" >> $GITHUB_ENV
+        fi
+    - name: Setup a remote Docker engine
+      run: |
+        sudo apt-get update
+        sudo snap install docker
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-southeast-1
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and Push Image to ECR
+      shell: bash 
+      run: |
+        docker build \
+          -t 655129405504.dkr.ecr.ap-southeast-1.amazonaws.com/backend-app:$TAG .
+        echo "Pushing image to ECR..."
+        docker push 655129405504.dkr.ecr.ap-southeast-1.amazonaws.com/backend-app:$TAG
+#############################################################################
+#==================================UNIT TEST================================#
+#############################################################################   
