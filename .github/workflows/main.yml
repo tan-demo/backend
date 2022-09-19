@@ -2,14 +2,14 @@ name: CI_App
 on:
   pull_request:
     branches:
-      - master
+      - main
     types:
       - opened
       - reopened
       - synchronize
   push:
     branches:
-      - master
+      - main
   create:
     tags:
       - sandbox.*
