@@ -27,6 +27,7 @@ concurrency:
 jobs:
   build:
     runs-on: self-hosted
+    container: ubuntu:latest
     steps:
     - name: Set Env for Tag
       id: set_tag
